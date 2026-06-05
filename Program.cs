@@ -117,4 +117,11 @@ app.MapGet("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
     return Results.Ok(result);
 });
 
+app.MapPost("/api/materials", (LoncotesLibraryDbContext db, Material material) =>
+{
+    db.Materials.Add(material);
+    db.SaveChanges();
+    return Results.Created($"/api/materials/{material.Id}", material);
+});
+
 app.Run();
