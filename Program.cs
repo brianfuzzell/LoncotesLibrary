@@ -84,6 +84,7 @@ app.MapGet("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
         MaterialName = newMaterial.MaterialName,
         MaterialTypeId = newMaterial.MaterialTypeId,
         GenreId = newMaterial.GenreId,
+        OutOfCirculationSince = newMaterial.OutOfCirculationSince,
         MaterialType = new MaterialTypeDTO
         {
             Id = newMaterial.MaterialType.Id,
@@ -122,6 +123,19 @@ app.MapPost("/api/materials", (LoncotesLibraryDbContext db, Material material) =
     db.Materials.Add(material);
     db.SaveChanges();
     return Results.Created($"/api/materials/{material.Id}", material);
+});
+
+app.MapDelete("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
+{
+    Material material = db.Materials.SingleOrDefault(material => material.Id == id);
+    if (material == null)
+    {
+        return Results.NotFound();
+    }
+
+    material.OutOfCirculationSince = DateTime.Now;
+    db.SaveChanges();
+    return Results.NoContent();
 });
 
 app.Run();
