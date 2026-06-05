@@ -138,7 +138,7 @@ app.MapDelete("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
     return Results.NoContent();
 });
 
-app.MapGet("api/materialtypes", (LoncotesLibraryDbContext db) =>
+app.MapGet("/api/materialtypes", (LoncotesLibraryDbContext db) =>
 {
     return db.MaterialTypes
     .Select(mt => new MaterialTypeDTO
@@ -149,13 +149,27 @@ app.MapGet("api/materialtypes", (LoncotesLibraryDbContext db) =>
     }).ToList();
 });
 
-app.MapGet("api/genres", (LoncotesLibraryDbContext db) =>
+app.MapGet("/api/genres", (LoncotesLibraryDbContext db) =>
 {
     return db.Genres
     .Select(g => new GenreDTO
     {
         Id = g.Id,
         Name = g.Name
+    }).ToList();
+});
+
+app.MapGet("/api/patrons", (LoncotesLibraryDbContext db) =>
+{
+    return db.Patrons
+    .Select(p => new PatronDTO
+    {
+        Id = p.Id,
+        FirstName = p.FirstName,
+        LastName = p.LastName,
+        Address = p.Address,
+        Email = p.Email,
+        IsActive = p.IsActive
     }).ToList();
 });
 
