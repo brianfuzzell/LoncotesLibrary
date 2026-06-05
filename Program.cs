@@ -26,4 +26,95 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.MapGet("/api/materials", (LoncotesLibraryDbContext db, int? materialTypeId, int? genreId) =>
+{
+    var query = db.Materials
+        .Include(m => m.Genre)
+        .Include(m => m.MaterialType)
+        .Where(m => m.OutOfCirculationSince == null);
+
+    if (materialTypeId != null)
+    {
+        query = query.Where(Material => Material.MaterialTypeId == materialTypeId);
+    }
+    if (genreId != null)
+    {
+        query = query.Where(Material => Material.GenreId == genreId);
+    }
+
+    return query
+        .Select(m => new MaterialDTO
+        {
+            Id = m.Id,
+            MaterialName = m.MaterialName,
+            MaterialTypeId = m.MaterialTypeId,
+            GenreId = m.GenreId,
+            OutOfCirculationSince = m.OutOfCirculationSince,
+            MaterialType = new MaterialTypeDTO
+            {
+                Id = m.MaterialType.Id,
+                Name = m.MaterialType.Name,
+                CheckoutDays = m.MaterialType.CheckoutDays
+            },
+            Genre = new GenreDTO
+            {
+                Id = m.Genre.Id,
+                Name = m.Genre.Name
+            }
+        }).ToList();
+});
+
+app.MapGet("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
+{
+    Material newMaterial = db.Materials
+    .Include(m => m.Genre)
+    .Include(m => m.MaterialType)
+    .Include(m => m.Checkouts)
+    .ThenInclude(c => c.Patron)
+    .SingleOrDefault(m => m.Id == id);
+
+    if (newMaterial == null)
+    {
+        return Results.NotFound();
+    }
+
+    MaterialDTO result = new MaterialDTO
+    {
+        Id = newMaterial.Id,
+        MaterialName = newMaterial.MaterialName,
+        MaterialTypeId = newMaterial.MaterialTypeId,
+        GenreId = newMaterial.GenreId,
+        MaterialType = new MaterialTypeDTO
+        {
+            Id = newMaterial.MaterialType.Id,
+            Name = newMaterial.MaterialType.Name,
+            CheckoutDays = newMaterial.MaterialType.CheckoutDays
+        },
+        Genre = new GenreDTO
+        {
+            Id = newMaterial.Genre.Id,
+            Name = newMaterial.Genre.Name
+        },
+        Checkouts = newMaterial.Checkouts.Select(c => new CheckoutDTO
+        {
+            Id = c.Id,
+            MaterialId = c.MaterialId,
+            PatronId = c.PatronId,
+            CheckoutDate = c.CheckoutDate,
+            ReturnDate = c.ReturnDate,
+            Patron = new PatronDTO
+            {
+                Id = c.Patron.Id,
+                FirstName = c.Patron.FirstName,
+                LastName = c.Patron.LastName,
+                Address = c.Patron.Address,
+                Email = c.Patron.Email,
+                IsActive = c.Patron.IsActive
+            }
+        }).ToList()
+    };
+
+    return Results.Ok(result);
+});
+
 app.Run();
