@@ -232,7 +232,7 @@ app.MapPut("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id, Patron pat
     patronToUpdate.Email = patron.Email;
 
     db.SaveChanges();
-    
+
     return Results.NoContent();
 });
 
@@ -247,6 +247,14 @@ app.MapDelete("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
     patron.IsActive = false;
     db.SaveChanges();
     return Results.NoContent();
+});
+
+app.MapPost("/api/checkouts", (LoncotesLibraryDbContext db, Checkout newCheckout) =>
+{
+    newCheckout.CheckoutDate = DateTime.Now;
+    db.Checkouts.Add(newCheckout);
+    db.SaveChanges();
+    return Results.Created($"/api/checkouts/{newCheckout.Id}", newCheckout);
 });
 
 app.Run();
