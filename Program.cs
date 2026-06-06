@@ -221,4 +221,19 @@ app.MapGet("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
     return Results.Ok(result);
 });
 
+app.MapPut("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id, Patron patron) =>
+{
+    Patron patronToUpdate = db.Patrons.SingleOrDefault(patron => patron.Id == id);
+    if (patronToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+    patronToUpdate.Address = patron.Address;
+    patronToUpdate.Email = patron.Email;
+
+    db.SaveChanges();
+    
+    return Results.NoContent();
+});
+
 app.Run();
