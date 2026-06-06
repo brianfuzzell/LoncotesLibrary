@@ -173,4 +173,52 @@ app.MapGet("/api/patrons", (LoncotesLibraryDbContext db) =>
     }).ToList();
 });
 
+app.MapGet("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
+{
+    Patron newPatron = db.Patrons
+    .Include(p => p.Checkouts)
+    .ThenInclude(c => c.Material)
+    .ThenInclude(m => m.MaterialType)
+    .SingleOrDefault(p => p.Id == id);
+
+    if (newPatron == null)
+    {
+        return Results.NotFound();
+    }
+
+    PatronDTO result = new PatronDTO
+    {
+        Id = newPatron.Id,
+        FirstName = newPatron.FirstName,
+        LastName = newPatron.LastName,
+        Address = newPatron.Address,
+        Email = newPatron.Email,
+        IsActive = newPatron.IsActive,
+        Checkouts = newPatron.Checkouts.Select(c => new CheckoutDTO
+        {
+            Id = c.Id,
+            MaterialId = c.MaterialId,
+            PatronId = c.PatronId,
+            CheckoutDate = c.CheckoutDate,
+            ReturnDate = c.ReturnDate,
+            Material = new MaterialDTO
+            {
+                Id = c.Material.Id,
+                MaterialName = c.Material.MaterialName,
+                MaterialTypeId = c.Material.MaterialTypeId,
+                GenreId = c.Material.GenreId,
+                OutOfCirculationSince = c.Material.OutOfCirculationSince,
+                MaterialType = new MaterialTypeDTO
+                {
+                    Id = c.Material.MaterialType.Id,
+                    Name = c.Material.MaterialType.Name,
+                    CheckoutDays = c.Material.MaterialType.CheckoutDays
+                }
+            }
+        }).ToList()
+    };
+
+    return Results.Ok(result);
+});
+
 app.Run();
