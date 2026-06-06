@@ -236,4 +236,17 @@ app.MapPut("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id, Patron pat
     return Results.NoContent();
 });
 
+app.MapDelete("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
+{
+    Patron patron = db.Patrons.SingleOrDefault(patron => patron.Id == id);
+    if (patron == null)
+    {
+        return Results.NotFound();
+    }
+
+    patron.IsActive = false;
+    db.SaveChanges();
+    return Results.NoContent();
+});
+
 app.Run();
