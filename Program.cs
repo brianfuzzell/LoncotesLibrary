@@ -251,10 +251,24 @@ app.MapDelete("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
 
 app.MapPost("/api/checkouts", (LoncotesLibraryDbContext db, Checkout newCheckout) =>
 {
-    newCheckout.CheckoutDate = DateTime.Now;
+    newCheckout.CheckoutDate = DateTime.Today;
     db.Checkouts.Add(newCheckout);
     db.SaveChanges();
     return Results.Created($"/api/checkouts/{newCheckout.Id}", newCheckout);
+});
+
+app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id, Checkout checkout) =>
+{
+    Checkout checkoutToUpdate = db.Checkouts.SingleOrDefault(checkout => checkout.Id == id);
+    if (checkoutToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+    checkoutToUpdate.ReturnDate = DateTime.Today;
+
+    db.SaveChanges();
+
+    return Results.NoContent();
 });
 
 app.Run();
