@@ -194,7 +194,7 @@ app.MapGet("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
         Address = newPatron.Address,
         Email = newPatron.Email,
         IsActive = newPatron.IsActive,
-        Checkouts = newPatron.Checkouts.Select(c => new CheckoutDTO
+        Checkouts = newPatron.Checkouts.Select(c => new CheckoutWithLateFeeDTO
         {
             Id = c.Id,
             MaterialId = c.MaterialId,
