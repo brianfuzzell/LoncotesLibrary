@@ -287,6 +287,19 @@ app.MapGet("/api/materials/available", (LoncotesLibraryDbContext db) =>
     .ToList();
 });
 
+app.MapGet("/api/checkouts", (LoncotesLibraryDbContext db) =>
+{
+    return db.Checkouts
+    .Select(c => new CheckoutDTO
+    {
+        Id = c.Id,
+        MaterialId = c.MaterialId,
+        PatronId = c.PatronId,
+        CheckoutDate = c.CheckoutDate,
+        ReturnDate = c.ReturnDate
+    }).ToList();
+});
+
 app.MapGet("/api/checkouts/overdue", (LoncotesLibraryDbContext db) =>
 {
     return db.Checkouts
