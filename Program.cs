@@ -257,7 +257,7 @@ app.MapPost("/api/checkouts", (LoncotesLibraryDbContext db, Checkout newCheckout
     return Results.Created($"/api/checkouts/{newCheckout.Id}", newCheckout);
 });
 
-app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id, Checkout checkout) =>
+app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id) =>
 {
     Checkout checkoutToUpdate = db.Checkouts.SingleOrDefault(checkout => checkout.Id == id);
     if (checkoutToUpdate == null)
