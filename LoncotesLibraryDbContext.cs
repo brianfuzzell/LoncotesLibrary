@@ -51,7 +51,7 @@ public class LoncotesLibraryDbContext : DbContext
 
         modelBuilder.Entity<Patron>().HasData(new Patron[]
         {
-        new Patron {Id = 1, FirstName = "Homer", LastName = "Simpson", Address = "742 Evergreen Terrace", Email = "homer@springfield.net", IsActive = true},
+        new Patron {Id = 1, FirstName = "Homer", LastName = "Simpson", Address = "742 Evergreen Terrace", Email = "homer@springfield.net", IsActive = false},
         new Patron {Id = 2, FirstName = "Marge", LastName = "Simpson", Address = "742 Evergreen Terrace", Email = "marge@springfield.net", IsActive = true},
         new Patron {Id = 3, FirstName = "Bart", LastName = "Simpson", Address = "742 Evergreen Terrace", Email = "bart@springfield.net", IsActive = true}
         });

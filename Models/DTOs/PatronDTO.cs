@@ -15,7 +15,7 @@ public class PatronDTO
     {
         get
         {
-            return Checkouts.Where(c => c.Paid != true && c.LateFee != null).Sum(c => c.LateFee ?? 0);
+            return Checkouts?.Where(c => c.Paid != true && c.LateFee != null).Sum(c => c.LateFee ?? 0) ?? 0;
         }
     }
 }
