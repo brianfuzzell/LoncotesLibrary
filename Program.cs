@@ -257,7 +257,7 @@ app.MapPost("/api/checkouts", (LoncotesLibraryDbContext db, Checkout newCheckout
     return Results.Created($"/api/checkouts/{newCheckout.Id}", newCheckout);
 });
 
-app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id, Checkout checkout) =>
+app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id) =>
 {
     Checkout checkoutToUpdate = db.Checkouts.SingleOrDefault(checkout => checkout.Id == id);
     if (checkoutToUpdate == null)
@@ -274,30 +274,64 @@ app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id, Checkout
 app.MapGet("/api/materials/available", (LoncotesLibraryDbContext db) =>
 {
     return db.Materials
+    .Include(m => m.Genre)
+    .Include(m => m.MaterialType)
     .Where(m => m.OutOfCirculationSince == null)
     .Where(m => m.Checkouts.All(co => co.ReturnDate != null))
-    .Select(material => new MaterialDTO
+    .Select(m => new MaterialDTO
     {
-        Id = material.Id,
-        MaterialName = material.MaterialName,
-        MaterialTypeId = material.MaterialTypeId,
-        GenreId = material.GenreId,
-        OutOfCirculationSince = material.OutOfCirculationSince
+        Id = m.Id,
+        MaterialName = m.MaterialName,
+        MaterialTypeId = m.MaterialTypeId,
+        GenreId = m.GenreId,
+        OutOfCirculationSince = m.OutOfCirculationSince,
+        Genre = new GenreDTO
+        {
+            Id = m.Genre.Id,
+            Name = m.Genre.Name
+        },
+        MaterialType = new MaterialTypeDTO
+        {
+            Id = m.MaterialType.Id,
+            Name = m.MaterialType.Name,
+            CheckoutDays = m.MaterialType.CheckoutDays
+        }
     })
     .ToList();
 });
 
-app.MapGet("/api/checkouts", (LoncotesLibraryDbContext db) =>
+app.MapGet("/api/checkouts", (LoncotesLibraryDbContext db, int? patronId, int? materialId) =>
 {
     return db.Checkouts
-    .Select(c => new CheckoutDTO
-    {
-        Id = c.Id,
-        MaterialId = c.MaterialId,
-        PatronId = c.PatronId,
-        CheckoutDate = c.CheckoutDate,
-        ReturnDate = c.ReturnDate
-    }).ToList();
+        .Include(c => c.Patron)
+        .Include(c => c.Material)
+        .Where(c => patronId == null || c.PatronId == patronId)
+        .Where(c => materialId == null || c.MaterialId == materialId)
+        .Select(c => new CheckoutDTO
+        {
+            Id = c.Id,
+            MaterialId = c.MaterialId,
+            PatronId = c.PatronId,
+            CheckoutDate = c.CheckoutDate,
+            ReturnDate = c.ReturnDate,
+            Material = new MaterialDTO
+            {
+                Id = c.Material.Id,
+                MaterialName = c.Material.MaterialName,
+                MaterialTypeId = c.Material.MaterialTypeId,
+                GenreId = c.Material.GenreId,
+                OutOfCirculationSince = c.Material.OutOfCirculationSince
+            },
+            Patron = new PatronDTO
+            {
+                Id = c.Patron.Id,
+                FirstName = c.Patron.FirstName,
+                LastName = c.Patron.LastName,
+                Address = c.Patron.Address,
+                Email = c.Patron.Email,
+                IsActive = c.Patron.IsActive
+            }
+        }).ToList();
 });
 
 app.MapGet("/api/checkouts/overdue", (LoncotesLibraryDbContext db) =>
