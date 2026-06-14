@@ -5,3 +5,6 @@ The Loncotes County Library has hired us to build a new web application to manag
 
 This is the ERD for the library's database:
 ![Loncotes ERD](Assets/loncotes-erd.png)
+
+## Automapper update
+Added Automapper for mapping Models to DTOs and refactored GET handlers to use Automapper 💪
