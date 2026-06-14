@@ -3,8 +3,13 @@ using LoncotesLibrary.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Json;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//Configure AutoMapper
+builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -26,12 +31,24 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/materials", (LoncotesLibraryDbContext db, int? materialTypeId, int? genreId) =>
+app.MapGet("/api/materialtypes", (LoncotesLibraryDbContext db, IMapper mapper) =>
 {
-    var query = db.Materials
-        .Include(m => m.Genre)
-        .Include(m => m.MaterialType)
-        .Where(m => m.OutOfCirculationSince == null);
+    return db.MaterialTypes.ProjectTo<MaterialDTO>(mapper.ConfigurationProvider).ToList();
+});
+
+app.MapGet("/api/genres", (LoncotesLibraryDbContext db, IMapper mapper) =>
+{
+    return db.Genres.ProjectTo<GenreDTO>(mapper.ConfigurationProvider).ToList();
+});
+
+app.MapGet("/api/patrons", (LoncotesLibraryDbContext db, IMapper mapper) =>
+{
+    return db.Patrons.ProjectTo<PatronDTO>(mapper.ConfigurationProvider).ToList();
+});
+
+app.MapGet("/api/materials", (LoncotesLibraryDbContext db, IMapper mapper, int? materialTypeId, int? genreId) =>
+{
+    var query = db.Materials.Where(m => m.OutOfCirculationSince == null);
 
     if (materialTypeId != null)
     {
@@ -42,80 +59,16 @@ app.MapGet("/api/materials", (LoncotesLibraryDbContext db, int? materialTypeId, 
         query = query.Where(Material => Material.GenreId == genreId);
     }
 
-    return query
-        .Select(m => new MaterialDTO
-        {
-            Id = m.Id,
-            MaterialName = m.MaterialName,
-            MaterialTypeId = m.MaterialTypeId,
-            GenreId = m.GenreId,
-            OutOfCirculationSince = m.OutOfCirculationSince,
-            MaterialType = new MaterialTypeDTO
-            {
-                Id = m.MaterialType.Id,
-                Name = m.MaterialType.Name,
-                CheckoutDays = m.MaterialType.CheckoutDays
-            },
-            Genre = new GenreDTO
-            {
-                Id = m.Genre.Id,
-                Name = m.Genre.Name
-            }
-        }).ToList();
+    return query.ProjectTo<MaterialDTO>(mapper.ConfigurationProvider).ToList();
 });
 
-app.MapGet("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
+app.MapGet("/api/materials/{id}", (IMapper mapper, LoncotesLibraryDbContext db, int id) =>
 {
-    Material newMaterial = db.Materials
-    .Include(m => m.Genre)
-    .Include(m => m.MaterialType)
-    .Include(m => m.Checkouts)
-    .ThenInclude(c => c.Patron)
+    var material = db.Materials
+    .ProjectTo<MaterialDTO>(mapper.ConfigurationProvider)
     .SingleOrDefault(m => m.Id == id);
 
-    if (newMaterial == null)
-    {
-        return Results.NotFound();
-    }
-
-    MaterialDTO result = new MaterialDTO
-    {
-        Id = newMaterial.Id,
-        MaterialName = newMaterial.MaterialName,
-        MaterialTypeId = newMaterial.MaterialTypeId,
-        GenreId = newMaterial.GenreId,
-        OutOfCirculationSince = newMaterial.OutOfCirculationSince,
-        MaterialType = new MaterialTypeDTO
-        {
-            Id = newMaterial.MaterialType.Id,
-            Name = newMaterial.MaterialType.Name,
-            CheckoutDays = newMaterial.MaterialType.CheckoutDays
-        },
-        Genre = new GenreDTO
-        {
-            Id = newMaterial.Genre.Id,
-            Name = newMaterial.Genre.Name
-        },
-        Checkouts = newMaterial.Checkouts.Select(c => new CheckoutDTO
-        {
-            Id = c.Id,
-            MaterialId = c.MaterialId,
-            PatronId = c.PatronId,
-            CheckoutDate = c.CheckoutDate,
-            ReturnDate = c.ReturnDate,
-            Patron = new PatronDTO
-            {
-                Id = c.Patron.Id,
-                FirstName = c.Patron.FirstName,
-                LastName = c.Patron.LastName,
-                Address = c.Patron.Address,
-                Email = c.Patron.Email,
-                IsActive = c.Patron.IsActive
-            }
-        }).ToList()
-    };
-
-    return Results.Ok(result);
+    return material != null ? Results.Ok(material) : Results.NotFound();
 });
 
 app.MapPost("/api/materials", (LoncotesLibraryDbContext db, Material material) =>
@@ -138,87 +91,13 @@ app.MapDelete("/api/materials/{id}", (LoncotesLibraryDbContext db, int id) =>
     return Results.NoContent();
 });
 
-app.MapGet("/api/materialtypes", (LoncotesLibraryDbContext db) =>
+app.MapGet("/api/patrons/{id}", (IMapper mapper, LoncotesLibraryDbContext db, int id) =>
 {
-    return db.MaterialTypes
-    .Select(mt => new MaterialTypeDTO
-    {
-        Id = mt.Id,
-        Name = mt.Name,
-        CheckoutDays = mt.CheckoutDays
-    }).ToList();
-});
-
-app.MapGet("/api/genres", (LoncotesLibraryDbContext db) =>
-{
-    return db.Genres
-    .Select(g => new GenreDTO
-    {
-        Id = g.Id,
-        Name = g.Name
-    }).ToList();
-});
-
-app.MapGet("/api/patrons", (LoncotesLibraryDbContext db) =>
-{
-    return db.Patrons
-    .Select(p => new PatronDTO
-    {
-        Id = p.Id,
-        FirstName = p.FirstName,
-        LastName = p.LastName,
-        Address = p.Address,
-        Email = p.Email,
-        IsActive = p.IsActive
-    }).ToList();
-});
-
-app.MapGet("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id) =>
-{
-    Patron newPatron = db.Patrons
-    .Include(p => p.Checkouts)
-    .ThenInclude(c => c.Material)
-    .ThenInclude(m => m.MaterialType)
+    var patron = db.Patrons
+    .ProjectTo<PatronDTO>(mapper.ConfigurationProvider)
     .SingleOrDefault(p => p.Id == id);
 
-    if (newPatron == null)
-    {
-        return Results.NotFound();
-    }
-
-    PatronDTO result = new PatronDTO
-    {
-        Id = newPatron.Id,
-        FirstName = newPatron.FirstName,
-        LastName = newPatron.LastName,
-        Address = newPatron.Address,
-        Email = newPatron.Email,
-        IsActive = newPatron.IsActive,
-        Checkouts = newPatron.Checkouts.Select(c => new CheckoutWithLateFeeDTO
-        {
-            Id = c.Id,
-            MaterialId = c.MaterialId,
-            PatronId = c.PatronId,
-            CheckoutDate = c.CheckoutDate,
-            ReturnDate = c.ReturnDate,
-            Material = new MaterialDTO
-            {
-                Id = c.Material.Id,
-                MaterialName = c.Material.MaterialName,
-                MaterialTypeId = c.Material.MaterialTypeId,
-                GenreId = c.Material.GenreId,
-                OutOfCirculationSince = c.Material.OutOfCirculationSince,
-                MaterialType = new MaterialTypeDTO
-                {
-                    Id = c.Material.MaterialType.Id,
-                    Name = c.Material.MaterialType.Name,
-                    CheckoutDays = c.Material.MaterialType.CheckoutDays
-                }
-            }
-        }).ToList()
-    };
-
-    return Results.Ok(result);
+    return patron != null ? Results.Ok(patron) : Results.NotFound();
 });
 
 app.MapPut("/api/patrons/{id}", (LoncotesLibraryDbContext db, int id, Patron patron) =>
@@ -271,111 +150,33 @@ app.MapPut("/api/checkouts/{id}", (LoncotesLibraryDbContext db, int id) =>
     return Results.NoContent();
 });
 
-app.MapGet("/api/materials/available", (LoncotesLibraryDbContext db) =>
+app.MapGet("/api/materials/available", (LoncotesLibraryDbContext db, IMapper mapper) =>
 {
-    return db.Materials
-    .Include(m => m.Genre)
-    .Include(m => m.MaterialType)
+    var query = db.Materials
     .Where(m => m.OutOfCirculationSince == null)
-    .Where(m => m.Checkouts.All(co => co.ReturnDate != null))
-    .Select(m => new MaterialDTO
-    {
-        Id = m.Id,
-        MaterialName = m.MaterialName,
-        MaterialTypeId = m.MaterialTypeId,
-        GenreId = m.GenreId,
-        OutOfCirculationSince = m.OutOfCirculationSince,
-        Genre = new GenreDTO
-        {
-            Id = m.Genre.Id,
-            Name = m.Genre.Name
-        },
-        MaterialType = new MaterialTypeDTO
-        {
-            Id = m.MaterialType.Id,
-            Name = m.MaterialType.Name,
-            CheckoutDays = m.MaterialType.CheckoutDays
-        }
-    })
-    .ToList();
+    .Where(m => m.Checkouts.All(co => co.ReturnDate != null));
+
+    return query.ProjectTo<MaterialDTO>(mapper.ConfigurationProvider).ToList();
 });
 
-app.MapGet("/api/checkouts", (LoncotesLibraryDbContext db, int? patronId, int? materialId) =>
+app.MapGet("/api/checkouts", (LoncotesLibraryDbContext db, IMapper mapper, int? patronId, int? materialId) =>
 {
-    return db.Checkouts
-        .Include(c => c.Patron)
-        .Include(c => c.Material)
-        .Where(c => patronId == null || c.PatronId == patronId)
-        .Where(c => materialId == null || c.MaterialId == materialId)
-        .Select(c => new CheckoutDTO
-        {
-            Id = c.Id,
-            MaterialId = c.MaterialId,
-            PatronId = c.PatronId,
-            CheckoutDate = c.CheckoutDate,
-            ReturnDate = c.ReturnDate,
-            Material = new MaterialDTO
-            {
-                Id = c.Material.Id,
-                MaterialName = c.Material.MaterialName,
-                MaterialTypeId = c.Material.MaterialTypeId,
-                GenreId = c.Material.GenreId,
-                OutOfCirculationSince = c.Material.OutOfCirculationSince
-            },
-            Patron = new PatronDTO
-            {
-                Id = c.Patron.Id,
-                FirstName = c.Patron.FirstName,
-                LastName = c.Patron.LastName,
-                Address = c.Patron.Address,
-                Email = c.Patron.Email,
-                IsActive = c.Patron.IsActive
-            }
-        }).ToList();
+    var query = db.Checkouts
+    .Where(c => patronId == null || c.PatronId == patronId)
+    .Where(c => materialId == null || c.MaterialId == materialId);
+
+    return query.ProjectTo<CheckoutDTO>(mapper.ConfigurationProvider).ToList();
 });
 
-app.MapGet("/api/checkouts/overdue", (LoncotesLibraryDbContext db) =>
+app.MapGet("/api/checkouts/overdue", (LoncotesLibraryDbContext db, IMapper mapper) =>
 {
-    return db.Checkouts
-    .Include(p => p.Patron)
-    .Include(co => co.Material)
-    .ThenInclude(m => m.MaterialType)
-    .Where(co =>
+    var query = db.Checkouts.
+    Where(co =>
         (DateTime.Today - co.CheckoutDate).Days >
         co.Material.MaterialType.CheckoutDays &&
-        co.ReturnDate == null)
-        .Select(co => new CheckoutDTO
-        {
-            Id = co.Id,
-            MaterialId = co.MaterialId,
-            Material = new MaterialDTO
-            {
-                Id = co.Material.Id,
-                MaterialName = co.Material.MaterialName,
-                MaterialTypeId = co.Material.MaterialTypeId,
-                MaterialType = new MaterialTypeDTO
-                {
-                    Id = co.Material.MaterialType.Id,
-                    Name = co.Material.MaterialType.Name,
-                    CheckoutDays = co.Material.MaterialType.CheckoutDays
-                },
-                GenreId = co.Material.GenreId,
-                OutOfCirculationSince = co.Material.OutOfCirculationSince
-            },
-            PatronId = co.PatronId,
-            Patron = new PatronDTO
-            {
-                Id = co.Patron.Id,
-                FirstName = co.Patron.FirstName,
-                LastName = co.Patron.LastName,
-                Address = co.Patron.Address,
-                Email = co.Patron.Email,
-                IsActive = co.Patron.IsActive
-            },
-            CheckoutDate = co.CheckoutDate,
-            ReturnDate = co.ReturnDate
-        })
-    .ToList();
+        co.ReturnDate == null);
+
+    return query.ProjectTo<CheckoutDTO>(mapper.ConfigurationProvider).ToList();
 });
 
 app.Run();
